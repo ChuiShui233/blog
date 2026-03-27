@@ -6,7 +6,7 @@
     "dev": "astro dev",
     "start": "astro dev",
     "check": "astro check",
-    "build": "astro build && pagefind --site dist && pnpm run deploy",
+    "build": "astro build && pagefind --site dist",
     "deploy": "git add . && git commit -m \"auto build\" || echo no changes && git push",
     "preview": "astro preview",
     "astro": "astro",
