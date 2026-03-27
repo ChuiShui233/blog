@@ -1,0 +1,27 @@
+---
+import { Image } from "astro:assets";
+import { getEntry } from "astro:content";
+import I18nKey from "../i18n/i18nKey";
+import { i18n } from "../i18n/translation";
+import MainGridLayout from "../layouts/MainGridLayout.astro";
+import notFoundImage from "./404.png";
+
+const title = "404 - Not Found";
+const description = "The page you are looking for does not exist.";
+---
+
+<MainGridLayout title={title} description={description}>
+    <div class="flex w-full rounded-[var(--radius-large)] overflow-hidden relative min-h-32 select-none">
+        <div class="card-base z-10 px-9 py-6 relative w-full text-center">
+            <div class="flex justify-center mb-4">
+                <Image src={notFoundImage} alt="404 Not Found" class="w-64 h-auto" />
+            </div>
+            <h1 class="text-9xl font-bold text-[var(--primary)] dark:text-[var(--primary)] mb-4">404</h1>
+            <h2 class="text-3xl font-bold text-[var(--primary)] dark:text-[var(--primary)] mb-8">Page Not Found</h2>
+            <p class="text-xl mb-8 text-black/75 dark:text-white/75">Oops! The page you are looking for does not exist or has been moved.</p>
+            <a href="/" class="btn-card px-6 py-3 rounded-lg text-lg font-bold transition text-black/75 dark:text-white/75 hover:text-[var(--primary)] dark:hover:text-[var(--primary)] active:scale-95">
+                Go Back Home
+            </a>
+        </div>
+    </div>
+</MainGridLayout>

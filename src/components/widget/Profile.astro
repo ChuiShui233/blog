@@ -1,0 +1,146 @@
+---
+import { Icon } from "astro-icon/components";
+import { profileConfig } from "../../config";
+import I18nKey from "../../i18n/i18nKey";
+import { i18n } from "../../i18n/translation";
+import { getSortedPosts } from "../../utils/content-utils";
+import { url } from "../../utils/url-utils";
+import ImageWrapper from "../misc/ImageWrapper.astro";
+
+const config = profileConfig;
+const posts = await getSortedPosts();
+const totalPosts = posts.length;
+let totalWords = 0;
+for (const post of posts) {
+	const { remarkPluginFrontmatter } = await post.render();
+	if (remarkPluginFrontmatter?.words) {
+		totalWords += remarkPluginFrontmatter.words;
+	}
+}
+const totalWordsDisplay =
+	totalWords < 10000
+		? `${totalWords.toLocaleString()}字`
+		: `${(totalWords / 10000).toFixed(totalWords >= 100000 ? 0 : 1)}w`;
+---
+<div class="card-base p-3">
+    <a aria-label="Go to About Page" href={url('/about/')}
+       class="group block relative mx-auto mt-1 lg:mx-0 lg:mt-0 mb-3
+       max-w-[12rem] lg:max-w-none overflow-hidden rounded-xl active:scale-95">
+        <div class="absolute transition pointer-events-none group-hover:bg-black/30 group-active:bg-black/50
+        w-full h-full z-50 flex items-center justify-center">
+            <Icon name="fa6-regular:address-card"
+                  class="transition opacity-0 scale-90 group-hover:scale-100 group-hover:opacity-100 text-white text-5xl">
+            </Icon>
+        </div>
+        <ImageWrapper src={config.avatar || ""} alt="Profile Image of the Author" class="mx-auto lg:w-full h-full lg:mt-0 "></ImageWrapper>
+    </a>
+    <div class="px-2">
+        <div class="font-bold text-xl text-center mb-1 dark:text-neutral-50 transition">{config.name}</div>
+        <div class="h-1 w-5 bg-[var(--primary)] mx-auto rounded-full mb-2 transition"></div>
+        <div id="profile-bio" class="text-center text-neutral-400 mb-2.5 transition">{config.bio}</div>
+        <div class="flex flex-wrap gap-2 justify-center mb-1">
+            {config.links.length > 1 && config.links.map(item =>
+                    <a rel="me" aria-label={item.name} href={item.url} target="_blank" class="btn-regular rounded-lg h-10 w-10 active:scale-90">
+                        <Icon name={item.icon} class="text-[1.5rem]"></Icon>
+                    </a>
+            )}
+            {config.links.length == 1 && <a rel="me" aria-label={config.links[0].name} href={config.links[0].url} target="_blank"
+                                            class="btn-regular rounded-lg h-10 gap-2 px-3 font-bold active:scale-95">
+                <Icon name={config.links[0].icon} class="text-[1.5rem]"></Icon>
+                {config.links[0].name}
+            </a>}
+        </div>
+    </div>
+    <div class="grid grid-cols-2 mt-3 pt-3 border-t border-black/10 dark:border-white/15 transition">
+        <div class="text-center">
+            <div class="text-xs text-black/50 dark:text-white/50 mb-1 flex items-center justify-center gap-1 transition">
+                <Icon name="material-symbols:article-outline" class="text-base"></Icon>
+                <span class="text-xs">{i18n(I18nKey.postCountLabel)}</span>
+            </div>
+            <div class="font-bold text-lg text-black/75 dark:text-white/75 transition">{totalPosts}</div>
+        </div>
+        <div class="text-center border-l border-black/10 dark:border-white/15 transition">
+            <div class="text-xs text-black/50 dark:text-white/50 mb-1 flex items-center justify-center gap-1 transition">
+                <Icon name="material-symbols:format-list-numbered" class="text-base"></Icon>
+                <span class="text-xs">{i18n(I18nKey.totalWords)}</span>
+            </div>
+            <div class="font-bold text-lg text-black/75 dark:text-white/75 transition">
+                {totalWordsDisplay}
+            </div>
+        </div>
+    </div>
+</div>
+<script is:inline>
+if (typeof window !== "undefined") {
+    const initTypingAnimation = () => {
+        const el = document.getElementById("profile-bio");
+        if (!el) return;
+        if (el.dataset.typingInitialized === "true") return;
+        el.dataset.typingInitialized = "true";
+        const fullText = el.textContent || "";
+        let index = 0;
+        let typeTimer = null;
+        let deleteTimer = null;
+        const typeSpeed = 80;
+        const deleteSpeed = 40;
+        const pauseAfterType = 1000;
+        const pauseAfterDelete = 500;
+        el.textContent = "";
+        const textSpan = document.createElement("span");
+        const cursorSpan = document.createElement("span");
+        cursorSpan.classList.add("typing-cursor");
+        cursorSpan.textContent = "|";
+        el.appendChild(textSpan);
+        el.appendChild(cursorSpan);
+        const cleanup = () => {
+            if (typeTimer) {
+                clearTimeout(typeTimer);
+                typeTimer = null;
+            }
+            if (deleteTimer) {
+                clearTimeout(deleteTimer);
+                deleteTimer = null;
+            }
+        };
+        const type = () => {
+            if (!el || el.dataset.typingInitialized !== "true") {
+                cleanup();
+                return;
+            }
+            if (index <= fullText.length) {
+                textSpan.textContent = fullText.slice(0, index);
+                index += 1;
+                typeTimer = window.setTimeout(type, typeSpeed);
+            } else {
+                deleteTimer = window.setTimeout(deleteText, pauseAfterType);
+            }
+        };
+        const deleteText = () => {
+            if (!el || el.dataset.typingInitialized !== "true") {
+                cleanup();
+                return;
+            }
+            if (index > 0) {
+                index -= 1;
+                textSpan.textContent = fullText.slice(0, index);
+                deleteTimer = window.setTimeout(deleteText, deleteSpeed);
+            } else {
+                typeTimer = window.setTimeout(type, pauseAfterDelete);
+            }
+        };
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0]?.isIntersecting) {
+                type();
+                observer.disconnect();
+            }
+        }, { threshold: 0.1, rootMargin: "50px" });
+        observer.observe(el);
+        el.dataset.typingCleanup = cleanup;
+    };
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initTypingAnimation);
+    } else {
+        initTypingAnimation();
+    }
+}
+</script>

@@ -1,0 +1,254 @@
+---
+import { Icon } from "astro-icon/components";
+import { aiSummaryConfig } from "../../config";
+
+interface Props {
+    articleContent?: string;
+    contentSelector?: string;
+    title?: string;
+    class?: string;
+}
+
+const { articleContent, contentSelector = '.markdown-content', title, class: className } = Astro.props;
+const apiDomain = aiSummaryConfig.apiDomain;
+const enabled = aiSummaryConfig.enabled;
+---
+<div class={`relative transition overflow-hidden bg-[var(--card-bg)]/95 rounded-[var(--radius-large)] p-6 ${className || ''}`}>
+    <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-3">
+            <div class="transition h-10 w-10 rounded-full bg-[var(--primary)]/10 flex items-center justify-center">
+                <Icon name="material-symbols:smart-toy" class="text-[var(--primary)] text-xl"></Icon>
+            </div>
+            <div>
+                <div class="transition font-bold text-90">AI文章摘要</div>
+                <div class="transition text-sm text-50">快速了解文章核心内容</div>
+            </div>
+        </div>
+
+        {enabled ? (
+            <div>
+                <button
+                    id="generate-summary-btn"
+                    class="transition flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--btn-regular-bg)] hover:bg-[var(--btn-regular-bg-hover)] active:bg-[var(--btn-regular-bg-active)] text-[var(--btn-content)]"
+                    data-content={articleContent || ''}
+                    data-content-selector={contentSelector}
+                    data-api-domain={apiDomain}
+                >
+                    <Icon name="material-symbols:play-arrow-rounded" class="text-lg"></Icon>
+                    <span class="text-sm font-medium">生成AI摘要</span>
+                </button>
+                <div id="summary-result" class="mt-4 p-4 rounded-lg bg-[var(--card-bg)]/95 border border-[var(--line-divider)] hidden">
+                    <div class="flex items-center gap-2 mb-2">
+                        <Icon name="material-symbols:description" class="text-[var(--primary)]"></Icon>
+                        <span class="font-medium text-90">摘要内容：</span>
+                    </div>
+                    <div id="summary-text" class="text-90 max-w-none prose prose-sm dark:prose-invert"></div>
+                </div>
+            </div>
+        ) : (
+            <div class="text-sm text-50">AI摘要功能已禁用</div>
+        )}
+    </div>
+</div>
+
+<script>
+    (function() {
+        const button = document.getElementById('generate-summary-btn');
+        if (!button) return;
+        
+        const resultDiv = document.getElementById('summary-result');
+        const summaryText = document.getElementById('summary-text');
+        const apiDomain = button.dataset.apiDomain;
+        const articleContent = button.dataset.content;
+        const contentSelector = button.dataset.contentSelector;
+        
+        // 简单的Markdown到HTML转换器
+        function simpleMarkdownToHtml(text) {
+            if (!text) return '';
+            
+            // 处理换行
+            let html = text
+                .replace(/\r\n/g, '\n')
+                .replace(/\r/g, '\n');
+            
+            // 处理标题 (# ## ###)
+            html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+            html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+            html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+            
+            // 处理加粗 (**text**)
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // 处理斜体 (*text*)
+            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            // 处理内联代码 (`code`)
+            html = html.replace(/`(.*?)`/g, '<code>$1</code>');
+            
+            // 处理无序列表
+            const lines = html.split('\n');
+            let inList = false;
+            let resultLines = [];
+            
+            for (let line of lines) {
+                if (line.match(/^\s*[-*+] (.+)/)) {
+                    if (!inList) {
+                        resultLines.push('<ul>');
+                        inList = true;
+                    }
+                    resultLines.push(`<li>${line.replace(/^\s*[-*+] (.+)/, '$1')}</li>`);
+                } else {
+                    if (inList) {
+                        resultLines.push('</ul>');
+                        inList = false;
+                    }
+                    resultLines.push(line);
+                }
+            }
+            if (inList) {
+                resultLines.push('</ul>');
+            }
+            
+            html = resultLines.join('\n');
+            
+            // 处理链接 [text](url)
+            html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-[var(--primary)] hover:underline">$1</a>');
+            
+            // 将连续的换行转换为段落
+            const paragraphs = html.split(/\n\s*\n/);
+            html = paragraphs
+                .map(p => {
+                    const trimmed = p.trim();
+                    if (!trimmed) return '';
+                    if (trimmed.startsWith('<h') || trimmed.startsWith('<ul') || trimmed.startsWith('<li')) {
+                        return trimmed;
+                    }
+                    return `<p>${trimmed}</p>`;
+                })
+                .join('');
+            
+            return html;
+        }
+        
+        button.addEventListener('click', async () => {
+            let content = articleContent;
+            if (!content || content.length === 0) {
+                // Extract content from selector
+                const contentElement = document.querySelector(contentSelector);
+                if (!contentElement) {
+                    alert('无法找到文章内容，请检查选择器配置');
+                    return;
+                }
+                content = contentElement.textContent || '';
+                if (content.length === 0) {
+                    alert('文章内容为空，无法生成摘要');
+                    return;
+                }
+            }
+            
+            button.disabled = true;
+            button.innerHTML = '<span class="text-sm font-medium">生成中...</span>';
+            resultDiv.classList.remove('hidden');
+            summaryText.innerHTML = '';
+            
+            try {
+                const response = await fetch(`${apiDomain}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        article: content.substring(0, 8000) // Limit to 8000 characters as per API
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API请求失败: ${response.status}`);
+                }
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let fullText = '';
+                
+                // 初始渲染
+                summaryText.innerHTML = '<div id="streaming-content"></div>';
+                const streamingContent = document.getElementById('streaming-content');
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    
+                    let hasNewContent = false;
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.substring(6);
+                            if (data === '[DONE]') {
+                                break;
+                            }
+                            if (data.trim() === '') continue;
+                            try {
+                                const parsed = JSON.parse(data);
+                                const content = parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.message?.content || '';
+                                if (content) {
+                                    fullText += content;
+                                    hasNewContent = true;
+                                }
+                            } catch (e) {
+                                // If not JSON, treat as plain text
+                                fullText += data;
+                                hasNewContent = true;
+                            }
+                        }
+                    }
+                    
+                    // 如果有新内容，实时渲染
+                    if (hasNewContent && streamingContent) {
+                        streamingContent.innerHTML = simpleMarkdownToHtml(fullText);
+                    }
+                }
+                // Process any remaining buffer
+                if (buffer.startsWith('data: ')) {
+                    const data = buffer.substring(6);
+                    if (data !== '[DONE]' && data.trim() !== '') {
+                        try {
+                            const parsed = JSON.parse(data);
+                            const content = parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.message?.content || '';
+                            if (content) {
+                                fullText += content;
+                                if (streamingContent) {
+                                    streamingContent.innerHTML = simpleMarkdownToHtml(fullText);
+                                }
+                            }
+                        } catch (e) {
+                            fullText += data;
+                            if (streamingContent) {
+                                streamingContent.innerHTML = simpleMarkdownToHtml(fullText);
+                            }
+                        }
+                    }
+                }
+                
+                // 最终渲染
+                if (fullText.trim()) {
+                    summaryText.innerHTML = simpleMarkdownToHtml(fullText);
+                } else {
+                    summaryText.innerHTML = '<p class="text-50">未生成任何内容</p>';
+                }
+                
+                // 生成成功，隐藏按钮
+                button.style.display = 'none';
+            } catch (error) {
+                summaryText.innerHTML = `<p class="text-red-500">生成失败</p>`;
+                // 出错时恢复按钮以便重试
+                button.disabled = false;
+                button.innerHTML = '<span class="text-sm font-medium">生成AI摘要</span>';
+            }
+        });
+    })();
+</script>

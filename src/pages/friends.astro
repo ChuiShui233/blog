@@ -1,0 +1,124 @@
+---
+import Comment from "@components/comment/index.astro";
+import { Icon } from "astro-icon/components";
+import ImageWrapper from "../components/misc/ImageWrapper.astro";
+import { siteConfig } from "../config";
+import I18nKey from "../i18n/i18nKey";
+import { i18n } from "../i18n/translation";
+import MainGridLayout from "../layouts/MainGridLayout.astro";
+import type { Friend } from "../types/data";
+
+const friends = Object.values(
+	import.meta.glob<Friend>("../data/friends/*.json", {
+		eager: true,
+		import: "default",
+	}),
+);
+---
+<MainGridLayout title={i18n(I18nKey.friends)}>
+    <div class="card-base p-6 md:p-8 mb-4">
+        <div class="flex items-center gap-2 mb-6">
+            <div class="h-8 w-8 rounded-lg bg-[var(--primary)] flex items-center justify-center text-white dark:text-black/70">
+                <Icon name="material-symbols:diversity-3" class="text-[1.5rem]" />
+            </div>
+            <h1 class="text-2xl font-bold text-black dark:text-white">{i18n(I18nKey.friends)}</h1>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {friends.map((friend) => (
+                <a href={friend.url} target="_blank" class="friend-card">
+                    <div class="flex items-center gap-2">
+                        <div class="relative w-5 h-5 rounded overflow-hidden" style={`--theme-hue: ${siteConfig.themeColor.hue}`}>
+                            <img src={friend.avatar} loading="lazy" class="w-full h-full object-cover transition-opacity duration-500" alt={friend.name} />
+                        </div>
+                        <div class="font-bold text-black dark:text-white">{friend.name}</div>
+                    </div>
+                    <div class="text-sm text-black/50 dark:text-white/50">{friend.description}</div>
+                </a>
+            ))}
+        </div>
+    </div>
+    <Comment postId="friends" />
+</MainGridLayout>
+<style>
+    @keyframes cardFadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(12px) translateZ(0);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) translateZ(0);
+        }
+    }
+    
+    @keyframes avatarRotate {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .friend-card {
+        @apply border border-black/10 dark:border-white/10 hover:border-black/20 dark:hover:border-white/20 hover:bg-black/5 dark:hover:bg-white/5 transition flex flex-col gap-1 p-4 rounded-lg;
+        transition-property: background-color, border-color, scale, transform, box-shadow;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 0.15s;
+        animation: cardFadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        opacity: 0;
+        transform: translateY(12px) translateZ(0);
+        will-change: transform, opacity;
+    }
+    
+    .friend-card:nth-child(1) { animation-delay: 0.05s; }
+    .friend-card:nth-child(2) { animation-delay: 0.1s; }
+    .friend-card:nth-child(3) { animation-delay: 0.15s; }
+    .friend-card:nth-child(4) { animation-delay: 0.2s; }
+    .friend-card:nth-child(5) { animation-delay: 0.25s; }
+    .friend-card:nth-child(6) { animation-delay: 0.3s; }
+    .friend-card:nth-child(7) { animation-delay: 0.35s; }
+    .friend-card:nth-child(8) { animation-delay: 0.4s; }
+    .friend-card:nth-child(9) { animation-delay: 0.45s; }
+    .friend-card:nth-child(10) { animation-delay: 0.5s; }
+    .friend-card:hover {
+        transform: perspective(1000px) rotateX(1deg) rotateY(1deg) translateY(-4px) translateZ(0);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.06);
+    }
+    
+    .dark .friend-card:hover {
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    .friend-card:active {
+        scale: .98;
+        transform: perspective(1000px) rotateX(1deg) rotateY(1deg) translateY(-2px) translateZ(0);
+    }
+    .friend-card:hover .font-bold {
+        color: var(--btn-content);
+    }
+    .friend-card:hover .text-sm {
+        @apply text-gray-700 dark:text-white;
+    }
+    .friend-card .font-bold,
+    .friend-card .text-sm {
+        transition-property: color;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 0.15s;
+    }
+    
+    .friend-card:hover .relative img {
+        transform: scale(1.1);
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .friend-card .relative img {
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    @media (prefers-reduced-motion: reduce) {
+        .friend-card,
+        .friend-card:hover,
+        .friend-card .relative img,
+        .friend-card:hover .relative img {
+            animation: none !important;
+            transition: none !important;
+            transform: none !important;
+        }
+    }
+</style>

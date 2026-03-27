@@ -1,0 +1,6 @@
+{
+	"name": "Fuwari",
+	"url": "https://fuwari.vercel.app",
+	"avatar": "https://raw.githubusercontent.com/saicaca/resource/main/fuwari/home.png",
+	"description": "A static blog template built with Astro."
+}

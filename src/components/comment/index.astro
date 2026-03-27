@@ -1,0 +1,29 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { commentConfig } from "@/config";
+import Twikoo from "./Twikoo.astro";
+
+interface Props {
+	post?: CollectionEntry<"posts">;
+	postId?: string;
+}
+
+const { post, postId } = Astro.props;
+
+let path = "";
+if (post) {
+	path = `/posts/${post.slug}`;
+} else if (postId) {
+	path = `/posts/${postId}`;
+}
+const url = `${Astro.site?.href}${path}`;
+
+let commentService = "";
+if (commentConfig?.twikoo) {
+	commentService = "twikoo";
+}
+---
+<div class="card-base p-6 mb-4 text-black/30 dark:text-white/30 transition">
+  {commentService === 'twikoo' && <Twikoo path={path} />}
+  {commentService === '' && null}
+</div>

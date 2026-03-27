@@ -1,0 +1,429 @@
+---
+import { Icon } from "astro-icon/components";
+import { siteConfig, profileConfig } from "../../config";
+import { formatDateToYYYYMMDD } from "../../utils/date-utils";
+import path from "node:path";
+
+interface Props {
+    title: string;
+    slug: string;
+    pubDate: Date;
+    description?: string;
+    coverImage?: string;
+    class?: string;
+}
+
+const { title, slug, pubDate, description, coverImage, class: className } = Astro.props;
+const postUrl = decodeURIComponent(Astro.url.toString());
+const siteName = siteConfig.title;
+const authorName = profileConfig.name;
+const formattedDate = formatDateToYYYYMMDD(pubDate);
+const shareText = `${title} - ${siteName}`;
+---
+<div class={`relative transition overflow-hidden bg-[var(--card-bg)] rounded-[var(--radius-large)] p-6 ${className || ''}`}>
+    <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-3">
+            <div class="transition h-10 w-10 rounded-full bg-[var(--primary)]/10 flex items-center justify-center">
+                <Icon name="material-symbols:share" class="text-[var(--primary)] text-xl"></Icon>
+            </div>
+            <div>
+                <div class="transition font-bold text-black/90 dark:text-white/90">分享这篇文章</div>
+                <div class="transition text-sm text-black/50 dark:text-white/50">让更多人看到精彩内容</div>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+            <!-- Copy Link -->
+            <button
+                class="transition flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--btn-regular-bg)] hover:bg-[var(--btn-regular-bg-hover)] active:bg-[var(--btn-regular-bg-active)] text-[var(--btn-content)]"
+                onclick="navigator.clipboard.writeText(postUrl); alert('链接已复制！')"
+            >
+                <Icon name="material-symbols:content-copy" class="text-lg"></Icon>
+                <span class="text-sm font-medium">复制链接</span>
+            </button>
+
+            <!-- Twitter/X -->
+            <a
+                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(postUrl)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="transition flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--btn-regular-bg)] hover:bg-[var(--btn-regular-bg-hover)] active:bg-[var(--btn-regular-bg-active)] text-[var(--btn-content)]"
+            >
+                <Icon name="fa6-brands:x-twitter" class="text-lg"></Icon>
+                <span class="text-sm font-medium">Twitter</span>
+            </a>
+
+            <!-- Weibo -->
+            <a
+                href={`http://service.weibo.com/share/share.php?title=${encodeURIComponent(shareText)}&url=${encodeURIComponent(postUrl)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="transition flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--btn-regular-bg)] hover:bg-[var(--btn-regular-bg-hover)] active:bg-[var(--btn-regular-bg-active)] text-[var(--btn-content)]"
+            >
+                <Icon name="fa6-brands:weibo" class="text-lg"></Icon>
+                <span class="text-sm font-medium">微博</span>
+            </a>
+
+            <!-- Telegram -->
+            <a
+                href={`https://t.me/share/url?url=${encodeURIComponent(postUrl)}&text=${encodeURIComponent(shareText)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="transition flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--btn-regular-bg)] hover:bg-[var(--btn-regular-bg-hover)] active:bg-[var(--btn-regular-bg-active)] text-[var(--btn-content)]"
+            >
+                <Icon name="fa6-brands:telegram" class="text-lg"></Icon>
+                <span class="text-sm font-medium">Telegram</span>
+            </a>
+
+            <!-- Generate Poster Button -->
+            <button
+                id="generate-poster-btn"
+                data-title={title}
+                data-author={authorName}
+                data-date={formattedDate}
+                data-site={siteName}
+                data-url={postUrl}
+                data-description={description || ''}
+                data-cover-image={coverImage || ''}
+                class="transition flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--primary)] text-white hover:bg-[var(--primary)]/90 active:bg-[var(--primary)]/80 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                <Icon name="material-symbols:image" class="text-lg"></Icon>
+                <span class="text-sm font-medium">生成分享海报</span>
+            </button>
+        </div>
+
+        <div id="poster-status" class="transition text-xs text-black/40 dark:text-white/40 mt-2">
+            点击按钮生成分享海报，支持下载和分享
+        </div>
+
+
+    </div>
+
+    <!-- Decorative element -->
+    <Icon name="material-symbols:share-location" class="transition text-[8rem] absolute pointer-events-none right-4 bottom-4 text-black/5 dark:text-white/5"></Icon>
+
+    <!-- Client-side script -->
+    <script is:inline>
+        // ShareCard 初始化函数
+        function initShareCard() {
+            const generateBtn = document.getElementById('generate-poster-btn');
+            const posterStatus = document.getElementById('poster-status');
+            const posterModal = document.getElementById('poster-modal');
+            const posterImage = document.getElementById('poster-image');
+            const downloadBtn = document.getElementById('download-poster-btn');
+            const shareBtn = document.getElementById('share-poster-btn');
+            const posterModalClose = document.getElementById('poster-modal-close');
+            const posterModalCloseBottom = document.getElementById('poster-modal-close-bottom');
+            const posterModalOverlay = document.getElementById('poster-modal-overlay');
+            
+            // 只检查必需的元素（生成按钮和状态元素）
+            if (!generateBtn || !posterStatus) {
+                return;
+            }
+            
+            // 检查模态窗口相关元素，如果缺失则跳过相关功能
+            const hasModal = posterModal && posterImage && downloadBtn && shareBtn && posterModalClose && posterModalCloseBottom && posterModalOverlay;
+            
+            let currentPosterDataUrl = '';
+            
+            // 转换相对图片路径为绝对URL
+            function convertRelativeImagePath(imagePath, postUrl) {
+                if (!imagePath) return '';
+                
+                // 如果已经是完整URL，直接返回
+                if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('//')) {
+                    return imagePath;
+                }
+                
+                try {
+                    const urlObj = new URL(postUrl);
+                    const baseUrl = urlObj.origin;
+                    
+                    // 处理相对路径
+                    if (imagePath.startsWith('./')) {
+                        // 移除开头的./
+                        const relativePath = imagePath.substring(2);
+                        // 构建文章目录URL
+                        const postDir = urlObj.pathname.split('/').slice(0, -1).join('/');
+                        return `${baseUrl}${postDir}/${relativePath}`;
+                    } else if (imagePath.startsWith('/')) {
+                        // 绝对路径
+                        return `${baseUrl}${imagePath}`;
+                    } else {
+                        // 相对路径但没有./
+                        const postDir = urlObj.pathname.split('/').slice(0, -1).join('/');
+                        return `${baseUrl}${postDir}/${imagePath}`;
+                    }
+                } catch (error) {
+                    console.error('转换图片路径失败:', error);
+                    return imagePath;
+                }
+            }
+            
+            // 显示模态窗口
+            function showPosterModal() {
+                if (!posterModal) return;
+                
+                // 移除hidden类以显示模态窗口
+                posterModal.classList.remove('hidden');
+                
+                // 触发重排以确保过渡生效
+                void posterModal.offsetHeight;
+                
+                // 移除透明和缩放类以触发过渡动画
+                const overlay = document.getElementById('poster-modal-overlay');
+                const content = document.getElementById('poster-modal-content');
+                
+                if (overlay) overlay.classList.remove('opacity-0');
+                if (content) {
+                    content.classList.remove('opacity-0', 'scale-95');
+                    content.classList.add('scale-100', 'opacity-100');
+                }
+                
+                document.body.style.overflow = 'hidden'; // 防止背景滚动
+            }
+            
+            // 隐藏模态窗口
+            function hidePosterModal() {
+                if (!posterModal) return;
+                
+                // 添加透明和缩放类以触发过渡动画
+                const overlay = document.getElementById('poster-modal-overlay');
+                const content = document.getElementById('poster-modal-content');
+                
+                if (overlay) overlay.classList.add('opacity-0');
+                if (content) {
+                    content.classList.remove('scale-100', 'opacity-100');
+                    content.classList.add('opacity-0', 'scale-95');
+                }
+                
+                // 等待过渡完成后隐藏模态窗口
+                setTimeout(() => {
+                    posterModal.classList.add('hidden');
+                    document.body.style.overflow = ''; // 恢复背景滚动
+                }, 300);
+            }
+            
+            // 移除可能存在的旧事件监听器
+            const generateBtnClone = generateBtn.cloneNode(true);
+            generateBtn.parentNode.replaceChild(generateBtnClone, generateBtn);
+            const newGenerateBtn = generateBtnClone;
+            
+            // 只在元素存在时克隆下载和分享按钮
+            let newDownloadBtn = null;
+            if (downloadBtn) {
+                const downloadBtnClone = downloadBtn.cloneNode(true);
+                downloadBtn.parentNode.replaceChild(downloadBtnClone, downloadBtn);
+                newDownloadBtn = downloadBtnClone;
+            }
+            
+            let newShareBtn = null;
+            if (shareBtn) {
+                const shareBtnClone = shareBtn.cloneNode(true);
+                shareBtn.parentNode.replaceChild(shareBtnClone, shareBtn);
+                newShareBtn = shareBtnClone;
+            }
+            
+            newGenerateBtn.addEventListener('click', async () => {
+                try {
+                    // 更新状态
+                    newGenerateBtn.disabled = true;
+                    newGenerateBtn.innerHTML = '<span class="flex items-center gap-2"><span class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span><span>生成中...</span></span>';
+                    
+                    // 获取主题色
+                    const primaryColor = getComputedStyle(document.documentElement)
+                        .getPropertyValue('--primary')
+                        .trim();
+                    
+                    // 获取封面图片URL
+                    let coverImageUrl = '';
+                    
+                    // 方法1：尝试从页面中的封面图片元素获取URL
+                    const postCoverElement = document.getElementById('post-cover');
+                    if (postCoverElement) {
+                        const coverImg = postCoverElement.querySelector('img');
+                        if (coverImg && coverImg.src) {
+                            coverImageUrl = coverImg.src;
+                        }
+                    }
+                    
+                    // 方法2：如果方法1失败，使用原来的相对路径转换方法
+                    if (!coverImageUrl && newGenerateBtn.dataset.coverImage) {
+                        coverImageUrl = convertRelativeImagePath(newGenerateBtn.dataset.coverImage, newGenerateBtn.dataset.url);
+                    }
+                    
+                    // 获取数据
+                    const posterData = {
+                        title: newGenerateBtn.dataset.title,
+                        author: newGenerateBtn.dataset.author,
+                        date: newGenerateBtn.dataset.date,
+                        siteName: newGenerateBtn.dataset.site,
+                        url: newGenerateBtn.dataset.url,
+                        description: newGenerateBtn.dataset.description,
+                        coverImage: coverImageUrl,
+                        primaryColor: primaryColor,
+                        backgroundColor: getComputedStyle(document.documentElement)
+                            .getPropertyValue('--page-bg').trim()
+                    };
+                    
+                    // 动态导入海报生成器
+                    const { generatePoster, downloadPoster, sharePoster } = await import('/utils/poster-generator.js');
+                    
+                    // 生成海报
+                    currentPosterDataUrl = await generatePoster(posterData);
+                    
+                    // 显示预览
+                    posterImage.src = currentPosterDataUrl;
+                    showPosterModal();
+                    
+                    // 更新状态
+                    posterStatus.textContent = '海报生成成功！可以下载或分享';
+                    posterStatus.className = 'transition text-xs text-green-600 dark:text-green-400 mt-2';
+                    
+                } catch (error) {
+                    console.error('海报生成失败:', error);
+                    posterStatus.textContent = '海报生成失败，请稍后重试';
+                    posterStatus.className = 'transition text-xs text-red-600 dark:text-red-400 mt-2';
+                } finally {
+                    // 恢复按钮状态
+                    newGenerateBtn.disabled = false;
+                    newGenerateBtn.innerHTML = '<span class="flex items-center gap-2"><span>生成分享海报</span></span>';
+                }
+            });
+            
+            if (newDownloadBtn) {
+                newDownloadBtn.addEventListener('click', async () => {
+                    if (!currentPosterDataUrl) return;
+                    
+                    try {
+                        const { downloadPoster } = await import('/utils/poster-generator.js');
+                        const title = newGenerateBtn.dataset.title;
+                        downloadPoster(currentPosterDataUrl, title);
+                        
+                        posterStatus.textContent = '海报下载成功！';
+                        posterStatus.className = 'transition text-xs text-green-600 dark:text-green-400 mt-2';
+                    } catch (error) {
+                        console.error('下载失败:', error);
+                        posterStatus.textContent = '下载失败，请稍后重试';
+                        posterStatus.className = 'transition text-xs text-red-600 dark:text-red-400 mt-2';
+                    }
+                });
+            }
+            
+            if (newShareBtn) {
+                newShareBtn.addEventListener('click', async () => {
+                    if (!currentPosterDataUrl) return;
+                    
+                    try {
+                        const { sharePoster } = await import('/utils/poster-generator.js');
+                        const title = newGenerateBtn.dataset.title;
+                        const success = await sharePoster(
+                            currentPosterDataUrl,
+                            title,
+                            `分享文章：${title}`
+                        );
+                        
+                        if (success) {
+                            posterStatus.textContent = '海报分享成功！';
+                            posterStatus.className = 'transition text-xs text-green-600 dark:text-green-400 mt-2';
+                        } else {
+                            posterStatus.textContent = '当前浏览器不支持分享功能，请尝试下载';
+                            posterStatus.className = 'transition text-xs text-yellow-600 dark:text-yellow-400 mt-2';
+                        }
+                    } catch (error) {
+                        console.error('分享失败:', error);
+                        posterStatus.textContent = '分享失败，请稍后重试';
+                        posterStatus.className = 'transition text-xs text-red-600 dark:text-red-400 mt-2';
+                    }
+                });
+            }
+            
+            // 克隆并替换关闭按钮以移除旧的事件监听器（只在元素存在时执行）
+            if (posterModalClose) {
+                const posterModalCloseClone = posterModalClose.cloneNode(true);
+                // 直接设置onclick属性确保点击事件工作
+                posterModalCloseClone.onclick = hidePosterModal;
+                posterModalClose.parentNode.replaceChild(posterModalCloseClone, posterModalClose);
+            }
+            
+            if (posterModalCloseBottom) {
+                const posterModalCloseBottomClone = posterModalCloseBottom.cloneNode(true);
+                posterModalCloseBottom.parentNode.replaceChild(posterModalCloseBottomClone, posterModalCloseBottom);
+                const newPosterModalCloseBottom = posterModalCloseBottomClone;
+                newPosterModalCloseBottom.addEventListener('click', hidePosterModal);
+            }
+            
+            if (posterModalOverlay) {
+                const posterModalOverlayClone = posterModalOverlay.cloneNode(true);
+                // 直接设置onclick属性确保点击事件工作
+                posterModalOverlayClone.onclick = hidePosterModal;
+                posterModalOverlay.parentNode.replaceChild(posterModalOverlayClone, posterModalOverlay);
+            }
+            
+            // ESC键关闭模态窗口（每次初始化时更新）
+            // 移除旧的监听器（如果存在）
+            if (window.posterModalEscapeHandler) {
+                document.removeEventListener('keydown', window.posterModalEscapeHandler);
+            }
+            
+            // 创建新的监听器
+            window.posterModalEscapeHandler = (event) => {
+                if (event.key === 'Escape' && !posterModal.classList.contains('hidden')) {
+                    hidePosterModal();
+                }
+            };
+            
+            // 添加新的监听器
+            document.addEventListener('keydown', window.posterModalEscapeHandler);
+            
+            // 复制链接功能优化
+            const copyLinkBtn = document.querySelector('button[onclick*="navigator.clipboard.writeText"]');
+            if (copyLinkBtn) {
+                const copyLinkBtnClone = copyLinkBtn.cloneNode(true);
+                copyLinkBtn.parentNode.replaceChild(copyLinkBtnClone, copyLinkBtn);
+                const newCopyLinkBtn = copyLinkBtnClone;
+                
+                const originalOnClick = newCopyLinkBtn.getAttribute('onclick');
+                newCopyLinkBtn.removeAttribute('onclick');
+                
+                newCopyLinkBtn.addEventListener('click', async () => {
+                    try {
+                        await navigator.clipboard.writeText(newGenerateBtn.dataset.url);
+                        const originalText = posterStatus.textContent;
+                        posterStatus.textContent = '链接已复制到剪贴板！';
+                        posterStatus.className = 'transition text-xs text-green-600 dark:text-green-400 mt-2';
+                        
+                        setTimeout(() => {
+                            posterStatus.textContent = originalText;
+                            posterStatus.className = 'transition text-xs text-black/40 dark:text-white/40 mt-2';
+                        }, 3000);
+                    } catch (error) {
+                        console.error('复制失败:', error);
+                        posterStatus.textContent = '复制失败，请手动复制链接';
+                        posterStatus.className = 'transition text-xs text-red-600 dark:text-red-400 mt-2';
+                    }
+                });
+            }
+        }
+        
+        // 页面加载时初始化
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initShareCard);
+        } else {
+            setTimeout(initShareCard, 100);
+        }
+        
+        // Swup 页面切换后重新初始化
+        if (window.swup) {
+            window.swup.hooks.on('content:replace', () => {
+                setTimeout(initShareCard, 50);
+            });
+        } else {
+            document.addEventListener('swup:enable', () => {
+                window.swup.hooks.on('content:replace', () => {
+                    setTimeout(initShareCard, 50);
+                });
+            });
+        }
+    </script>
+</div>

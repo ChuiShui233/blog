@@ -1,0 +1,52 @@
+---
+import { getPageViews } from "@utils/umami-stats";
+import I18nKey from "@i18n/i18nKey";
+import { i18n } from "@i18n/translation";
+
+interface Props {
+    path: string;
+    showLabel?: boolean;
+}
+
+const { path, showLabel = true } = Astro.props;
+---
+
+<div class="pageviews flex items-center" data-path={path}>
+    <div class="meta-icon">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        </svg>
+    </div>
+    <span id="pageviews-count-{path.replace(/[^\w]/g, '-')}" class="text-50 text-sm font-medium">
+        {showLabel ? i18n(I18nKey.pageViews) + ": " : ""}
+        <span class="pageviews-number">--</span>
+    </span>
+</div>
+
+<script>
+    (async () => {
+        const div = document.currentScript.closest('.pageviews');
+        const path = div.dataset.path;
+        const numberSpan = div.querySelector('.pageviews-number');
+        try {
+            const pageviews = await getPageViews(path);
+            numberSpan.textContent = pageviews.toLocaleString();
+        } catch (error) {
+            console.error('Failed to load pageviews:', error);
+            numberSpan.textContent = '0';
+        }
+    })();
+</script>
+
+<style>
+    .meta-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.5rem;
+        height: 1.5rem;
+        margin-right: 0.5rem;
+        color: var(--meta-icon);
+    }
+</style>

@@ -1,0 +1,84 @@
+---
+import { commentConfig } from "@/config";
+
+interface Props {
+	path: string;
+}
+
+const { path } = Astro.props;
+---
+
+<div id="tcomment"></div>
+
+<script is:inline src="https://cdn.jsdelivr.net/npm/twikoo@1.6.45/dist/twikoo.nocss.js"></script>
+
+<script is:inline define:vars={{ commentConfig, path }}>
+  function loadTwikoo() {
+    twikoo.init({
+      envId: commentConfig.twikoo.envId,
+      el: '#tcomment',
+      region: commentConfig.twikoo.region,
+      lang: commentConfig.twikoo.lang,
+      path: path,
+    })
+  }
+
+  loadTwikoo();
+
+  // 监听 swup 页面替换事件，重新初始化 Twikoo
+  document.addEventListener('swup:contentReplaced', loadTwikoo);
+</script>
+
+<style is:global>
+    /* 浅色模式下的 Twikoo 样式调整 */
+    :root {
+        --twikoo-body-text-color-main: #4a4a4a;
+        --twikoo-body-text-color-sec: #999999;
+    }
+    
+    :root.dark {
+        --twikoo-body-text-color-main: rgba(255, 255, 255, 0.9);
+        --twikoo-body-text-color-sec: rgba(255, 255, 255, 0.7);
+    }
+
+    .twikoo .el-input-group__prepend,
+    .twikoo .tk-action-icon,
+    .twikoo .tk-time,
+    .twikoo .tk-comments-count {
+        color: var(--twikoo-body-text-color-sec);
+    }
+
+    .twikoo .tk-content {
+        color: var(--twikoo-body-text-color-main);
+    }
+
+    /* 强制深色模式下的字体颜色 */
+    :root.dark .twikoo .tk-content,
+    :root.dark .twikoo .tk-nick,
+    :root.dark .twikoo .tk-time,
+    :root.dark .twikoo .el-input__inner {
+        color: var(--twikoo-body-text-color-main) !important;
+    }
+    
+    :root.dark .twikoo .tk-preview-container {
+        color: var(--twikoo-body-text-color-main) !important;
+    }
+
+    /* 适配 Fuwari 的卡片样式 */
+    .tk-meta-input {
+        background-color: transparent !important;
+    }
+    
+    .el-input__inner {
+        background-color: transparent !important;
+        color: var(--twikoo-body-text-color-main) !important;
+    }
+    
+    .tk-submit-action-icon {
+        color: var(--primary) !important;
+    }
+    
+    .tk-submit-action-icon:hover {
+        opacity: 0.8;
+    }
+</style>

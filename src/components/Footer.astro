@@ -1,0 +1,24 @@
+---
+
+import { profileConfig } from "../config";
+import { url } from "../utils/url-utils";
+
+const currentYear = new Date().getFullYear();
+---
+
+<div class="transition border-t border-black/10 dark:border-white/15 my-10 border-dashed mx-32"></div>
+<div class="card-base w-fit mx-auto rounded-xl mt-4 mb-4">
+    <div class="transition text-50 text-sm text-center p-6">
+        &copy; <span id="copyright-year">2024 - {currentYear}</span> {profileConfig.name}. All Rights Reserved.
+        <br>
+        <a class="transition link text-[var(--primary)] font-medium" target="_blank" href={url('rss.xml')}>RSS</a> /
+        <a class="transition link text-[var(--primary)] font-medium" target="_blank" href={url('sitemap-index.xml')}>Sitemap</a>
+        <br>
+        Powered by
+        <a class="transition link text-[var(--primary)] font-medium" target="_blank" href="https://astro.build">Astro</a> &
+        <a class="transition link text-[var(--primary)] font-medium" target="_blank" href="https://github.com/saicaca/fuwari">Fuwari</a>
+        <br>
+        <a class="transition link text-[var(--primary)] font-medium" target="_blank" href="https://icp.gov.moe/?keyword=20262016">萌ICP备20262016号</a>
+    </div>
+</div>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8467175359044157" crossorigin="anonymous"></script>
