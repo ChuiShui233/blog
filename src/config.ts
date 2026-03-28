@@ -102,7 +102,7 @@ export const musicPlayerConfig: MusicPlayerConfig = {
 	mode: "meting",
 	server: "netease",
 	type: "playlist",
-	id: "6809840425",
+	id: "17797623147",
 };
 
 export const commentConfig: CommentConfig = {
