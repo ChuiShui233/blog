@@ -13,7 +13,7 @@ let mode = musicPlayerConfig.mode ?? "meting";
 // Meting API 地址，从配置中获取或使用默认地址
 let meting_api =
 	musicPlayerConfig.meting_api ??
-	"https://api.i-meto.com/meting/api?server=:server&type=:type&id=:id&auth=:auth&r=:r";
+	"https://api.moeyao.cn/meting/?type=:type&id=:id";
 // Meting API 的 ID，从配置中获取或使用默认值
 let meting_id = musicPlayerConfig.id ?? "14164869977";
 // Meting API 的服务器，从配置中获取或使用默认值,有的meting的api源支持更多平台,一般来说,netease=网易云音乐, tencent=QQ音乐, kugou=酷狗音乐, xiami=虾米音乐, baidu=百度音乐
@@ -56,7 +56,7 @@ let showError = false;
 let currentSong = {
 	title: "加载中...",
 	artist: "加载中...",
-	cover: "/favicon/favicon.ico",
+	cover: "",
 	url: "",
 	duration: 0,
 };
@@ -152,7 +152,7 @@ async function fetchMetingPlaylist() {
 				id: song.id,
 				title,
 				artist,
-				cover: song.pic ?? "",
+				cover: song.cover ?? song.pic ?? "",
 				url: song.url ?? "",
 				duration: dur,
 			};
@@ -521,10 +521,12 @@ onDestroy(() => {
                  role="button"
                  tabindex="0"
                  aria-label={isPlaying ? i18n(Key.musicPlayerPause) : i18n(Key.musicPlayerPlay)}>
-                <img src={getAssetPath(currentSong.cover)} alt={i18n(Key.musicPlayerCover)}
-                     class="w-full h-full object-cover transition-transform duration-300"
-                     class:spinning={isPlaying && !isLoading}
-                     class:animate-pulse={isLoading} />
+                {#if currentSong.cover}
+                    <img src={getAssetPath(currentSong.cover)} alt={i18n(Key.musicPlayerCover)}
+                         class="w-full h-full object-cover transition-transform duration-300"
+                         class:spinning={isPlaying && !isLoading}
+                         class:animate-pulse={isLoading} />
+                {/if}
                 <div class="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                     {#if isLoading}
                         <Icon icon="eos-icons:loading" class="text-white text-xl" />
@@ -570,10 +572,12 @@ onDestroy(() => {
          class:pointer-events-none={!isExpanded}>
         <div class="flex items-center gap-4 mb-4">
             <div class="cover-container relative w-16 h-16 rounded-full overflow-hidden shrink-0">
-                <img src={getAssetPath(currentSong.cover)} alt={i18n(Key.musicPlayerCover)}
-                     class="w-full h-full object-cover transition-transform duration-300"
-                     class:spinning={isPlaying && !isLoading}
-                     class:animate-pulse={isLoading} />
+                {#if currentSong.cover}
+                    <img src={getAssetPath(currentSong.cover)} alt={i18n(Key.musicPlayerCover)}
+                         class="w-full h-full object-cover transition-transform duration-300"
+                         class:spinning={isPlaying && !isLoading}
+                         class:animate-pulse={isLoading} />
+                {/if}
             </div>
             <div class="flex-1 min-w-0">
                 <div class="song-title text-lg font-bold text-90 truncate mb-1">{currentSong.title}</div>
@@ -733,7 +737,9 @@ onDestroy(() => {
                             {/if}
                         </div>
                         <div class="w-10 h-10 rounded-lg overflow-hidden bg-[var(--btn-regular-bg)] shrink-0">
-                            <img src={getAssetPath(song.cover)} alt={song.title} loading="lazy" class="w-full h-full object-cover" />
+                            {#if song.cover}
+                                <img src={getAssetPath(song.cover)} alt={song.title} loading="lazy" class="w-full h-full object-cover" />
+                            {/if}
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="font-medium truncate" class:text-[var(--primary)]={index === currentIndex} class:text-90={index !== currentIndex}>
